@@ -14,7 +14,7 @@
     "build": "tsc -p tsconfig.json",
     "build:release": "npm run clean && tsc -p tsconfig.release.json",
     "lint": "eslint . --ext .ts --ext .mts",
-    "test": "jest --runInBand",
+    "test": "npm run build && jest --runInBand",
     "test:coverage": "jest --coverage --runInBand",
     "prettier": "prettier --config .prettierrc --write .",
     "test:watch": "jest --watch --runInBand",
@@ -29,9 +29,12 @@
   },
   "dependencies": {
     "@prisma/client": "5.8.1",
+    "axios": "^1.8.4",
+    "axios-retry": "^4.5.0",
     "express": "^4.21.1",
     "morgan": "^1.10.0",
-    "tslib": "~2.6"
+    "tslib": "~2.6",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",

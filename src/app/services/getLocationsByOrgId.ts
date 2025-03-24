@@ -1,22 +1,128 @@
-import { AbstractRepo } from '#app/repositories/apiRepository'
+import { OrgId, RequestedVars } from "#app/types";
+import { AbstractRepo, FetchedVars, FetchedLocations } from "#app/repositories/apiRepository";
+import { OrgIdNotFoundError } from "#app/errors";
 
-type GetLocationsByOrgIdParams = {
-  apiRepo: AbstractRepo
-  orgId: string
-  variables: string[]
+type ResultLocation = {
+  location: { id: number; orgId: number }
+  variables: {
+    [key: string]: {
+      value: string | null
+      inheritance: string | null
+    }
+  }
 }
 
-async function getLocationsByOrgId({ apiRepo, orgId, variables }: GetLocationsByOrgIdParams) {
+async function getLocationsByOrgId({ apiRepo, orgId, requestedVars }: {
+  apiRepo: AbstractRepo,
+  orgId: OrgId,
+  requestedVars: RequestedVars
+}): Promise<Array<ResultLocation>> {
+  const fetchedLocations = await apiRepo.getLocations()
+  const fetchedVars = await apiRepo.getVariables()
 
-  // const fetchedLocations = await apiRepo.getLocations()
-  // const fetchedVariables = await apiRepo.getVariables()
+  const locations = fetchedLocations.map(location => new Location(location, requestedVars))
+  const locationsForOrg = getLocationsForOrgId(locations, orgId)
 
-  // logic to merge locations and variables
-  apiRepo
-  orgId
-  variables
+  const variables = fetchedVars.map(variable => new Variable(variable))
+    .filter(variable => variable.isRelevent(orgId, requestedVars))
 
-  return []
+  return mergeVarsToLocations(locationsForOrg, variables)
+}
+
+
+function mergeVarsToLocations(locations: Array<Location>, variables: Array<Variable>): Array<ResultLocation> {
+  return locations.map(location => {
+    const orgVars = variables.filter(v => v.isOrgVariable)
+    const locationVars = variables.filter(v => v.isForLocation(location))
+
+    location.applyOrgVars(orgVars)
+    location.applyLocationVars(locationVars)
+
+    return location.data
+  })
+}
+
+function getLocationsForOrgId(locations: Array<Location>, orgId: OrgId): Array<Location> {
+  const locationsForOrg = locations.filter(location => location.isForOrgId(orgId))
+  if (locationsForOrg.length === 0) {
+    throw new OrgIdNotFoundError('No locations found for orgId')
+  }
+  return locationsForOrg
+}
+
+class Location {
+  private _data: ResultLocation
+
+  constructor(
+    private fetchedLocation: FetchedLocations[number],
+    private requestedVars: RequestedVars
+  ) {
+    this._data = this.init()
+  }
+
+  init(): ResultLocation {
+    return {
+      location: {
+        id: this.fetchedLocation.id,
+        orgId: this.fetchedLocation.orgId
+      },
+      variables: Object.fromEntries(
+        this.requestedVars.map(variable => [variable, { value: null, inheritance: null }])
+      )
+    }
+  }
+
+  applyVars(vars: Array<Variable>, inheritance: string) {
+    vars.forEach(variable => this.setVariable(variable.key, variable.value, inheritance))
+  }
+
+  applyOrgVars(orgVars: Array<Variable>) {
+    this.applyVars(orgVars, 'org')
+  }
+
+  applyLocationVars(locationVars: Array<Variable>) {
+    this.applyVars(locationVars, 'location')
+  }
+
+  get id() {
+    return this._data.location.id
+  }
+
+  isForOrgId(orgId: OrgId) {
+    return this.fetchedLocation.orgId === orgId
+  }
+
+  setVariable(key: string, value: string | null, inheritance: string) {
+    this._data.variables[key] = { value, inheritance }
+  }
+
+  get data() {
+    return this._data
+  }
+}
+
+class Variable {
+  constructor(private fetchedVar: FetchedVars[number]) { }
+
+  get value() {
+    return this.fetchedVar.value
+  }
+
+  get key() {
+    return this.fetchedVar.key
+  }
+
+  isRelevent(orgId: OrgId, requestedVars: RequestedVars) {
+    return this.fetchedVar.orgId === orgId && requestedVars.includes(this.key)
+  }
+
+  get isOrgVariable() {
+    return this.fetchedVar.locationId === null
+  }
+
+  isForLocation(location: Location) {
+    return this.fetchedVar.locationId === location.id
+  }
 }
 
 export {

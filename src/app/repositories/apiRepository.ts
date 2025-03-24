@@ -1,42 +1,80 @@
+import axios, { AxiosError, AxiosInstance } from 'axios'
+import axiosRetry from 'axios-retry'
+import { z, ZodError } from 'zod'
+import { ExternalApiError, SchemaValidationError } from '#app/errors'
+
+
 interface AbstractRepo {
-  getLocations: () => Promise<unknown>
-  getVariables: () => Promise<unknown>
+  getLocations: () => Promise<FetchedLocations>
+  getVariables: () => Promise<FetchedVars>
 }
 
-// emplement retries and exponential backoff
+type FetchedLocations = Array<{ id: number; orgId: number }>
+type FetchedVars = Array<{
+  id: number
+  orgId: number
+  locationId: number | null
+  key: string
+  value: string
+}>
+
+
 class ApiRepo implements AbstractRepo {
-  private apiBaseUrl: string
+  private client: AxiosInstance
 
   constructor() {
-    this.apiBaseUrl = 'https://swivl-interview-e61c73ef3cf5.herokuapp.com';
+    const baseURL = 'https://swivl-interview-e61c73ef3cf5.herokuapp.com/api'
+    this.client = axios.create({ baseURL })
+    axiosRetry(this.client, { retries: 3, retryDelay: axiosRetry.exponentialDelay })
   }
 
-  async getLocations() {
-    const response = await fetch(`${this.apiBaseUrl}/api/locations`)
+  async get(path: string) {
+    try {
+      const response = await this.client.get(path)
+      return response.data
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        console.error('ExternalApiError:', error.response?.data)
+        throw new ExternalApiError()
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch locations')
+      } else if (error instanceof ZodError) {
+        console.error('SchemaValidationError:', error.message)
+        throw new SchemaValidationError()
+      }
+
+      throw error
     }
-
-    // possibly schema validation on response
-
-    return await response.json()
   }
 
-  async getVariables() {
-    const response = await fetch(`${this.apiBaseUrl}/api/variables`)
+  async getLocations(): Promise<FetchedLocations> {
+    const LocationsSchema = z.array(z.object({
+      id: z.number(),
+      orgId: z.number(),
+    }))
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch variables')
-    }
+    const locations = await this.get('/locations')
 
-    // possibly schema validation on response
+    return LocationsSchema.parse(locations)
+  }
 
-    return await response.json()
+  async getVariables(): Promise<FetchedVars> {
+    const VariablesSchema = z.array(z.object({
+      id: z.number(),
+      orgId: z.number(),
+      locationId: z.number().nullable(),
+      key: z.string(),
+      value: z.string(),
+    }))
+
+    const variables = await this.get('/variables')
+
+    return VariablesSchema.parse(variables)
   }
 }
 
 export {
   AbstractRepo,
-  ApiRepo
+  ApiRepo,
+  FetchedLocations,
+  FetchedVars
 }
