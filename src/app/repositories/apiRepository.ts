@@ -2,6 +2,7 @@ import axios, { AxiosError, AxiosInstance } from 'axios'
 import axiosRetry from 'axios-retry'
 import { z, ZodError } from 'zod'
 import { ExternalApiError, SchemaValidationError } from '#app/errors'
+import { LocationId, OrgId } from '#app/types'
 
 
 interface AbstractRepo {
@@ -9,11 +10,11 @@ interface AbstractRepo {
   getVariables: () => Promise<FetchedVars>
 }
 
-type FetchedLocations = Array<{ id: number; orgId: number }>
+type FetchedLocations = Array<{ id: LocationId; orgId: OrgId }>
 type FetchedVars = Array<{
   id: number
-  orgId: number
-  locationId: number | null
+  orgId: OrgId
+  locationId: LocationId
   key: string
   value: string
 }>
@@ -54,7 +55,7 @@ class ApiRepo implements AbstractRepo {
 
     const locations = await this.get('/locations')
 
-    return LocationsSchema.parse(locations)
+    return LocationsSchema.parse(locations) as FetchedLocations
   }
 
   async getVariables(): Promise<FetchedVars> {
@@ -68,7 +69,7 @@ class ApiRepo implements AbstractRepo {
 
     const variables = await this.get('/variables')
 
-    return VariablesSchema.parse(variables)
+    return VariablesSchema.parse(variables) as FetchedVars
   }
 }
 

@@ -1,9 +1,9 @@
-import { OrgId, RequestedVars } from "#app/types";
-import { AbstractRepo, FetchedVars, FetchedLocations } from "#app/repositories/apiRepository";
+import { LocationId, OrgId, RequestedVars } from "#app/types";
+import { AbstractRepo } from "#app/repositories/apiRepository";
 import { OrgIdNotFoundError } from "#app/errors";
 
 type ResultLocation = {
-  location: { id: number; orgId: number }
+  location: { id: LocationId; orgId: OrgId }
   variables: {
     [key: string]: {
       value: string | null
@@ -20,11 +20,19 @@ async function getLocationsByOrgId({ apiRepo, orgId, requestedVars }: {
   const fetchedLocations = await apiRepo.getLocations()
   const fetchedVars = await apiRepo.getVariables()
 
-  const locations = fetchedLocations.map(location => new Location(location, requestedVars))
+  const locations = fetchedLocations.map(location => new Location(
+    location.id,
+    location.orgId,
+    requestedVars
+  ))
   const locationsForOrg = getLocationsForOrgId(locations, orgId)
 
-  const variables = fetchedVars.map(variable => new Variable(variable))
-    .filter(variable => variable.isRelevent(orgId, requestedVars))
+  const variables = fetchedVars.map(variable => new Variable(
+    variable.value,
+    variable.key,
+    variable.orgId,
+    variable.locationId,
+  )).filter(variable => variable.isRelevent(orgId, requestedVars))
 
   return mergeVarsToLocations(locationsForOrg, variables)
 }
@@ -54,7 +62,8 @@ class Location {
   private _data: ResultLocation
 
   constructor(
-    private fetchedLocation: FetchedLocations[number],
+    private locationId: LocationId,
+    private orgId: OrgId,
     private requestedVars: RequestedVars
   ) {
     this._data = this.init()
@@ -63,8 +72,8 @@ class Location {
   init(): ResultLocation {
     return {
       location: {
-        id: this.fetchedLocation.id,
-        orgId: this.fetchedLocation.orgId
+        id: this.locationId,
+        orgId: this.orgId
       },
       variables: Object.fromEntries(
         this.requestedVars.map(variable => [variable, { value: null, inheritance: null }])
@@ -89,7 +98,7 @@ class Location {
   }
 
   isForOrgId(orgId: OrgId) {
-    return this.fetchedLocation.orgId === orgId
+    return this.orgId === orgId
   }
 
   setVariable(key: string, value: string | null, inheritance: string) {
@@ -102,26 +111,31 @@ class Location {
 }
 
 class Variable {
-  constructor(private fetchedVar: FetchedVars[number]) { }
+  constructor(
+    private _value: string | null,
+    private _key: string,
+    private _orgId: OrgId,
+    private _locationId: LocationId
+  ) { }
 
   get value() {
-    return this.fetchedVar.value
+    return this._value
   }
 
   get key() {
-    return this.fetchedVar.key
+    return this._key
   }
 
   isRelevent(orgId: OrgId, requestedVars: RequestedVars) {
-    return this.fetchedVar.orgId === orgId && requestedVars.includes(this.key)
+    return this._orgId === orgId && requestedVars.includes(this._key)
   }
 
   get isOrgVariable() {
-    return this.fetchedVar.locationId === null
+    return this._locationId === null
   }
 
   isForLocation(location: Location) {
-    return this.fetchedVar.locationId === location.id
+    return this._locationId === location.id
   }
 }
 

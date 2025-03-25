@@ -1,6 +1,6 @@
 import { getLocationsByOrgId } from '#app/services/getLocationsByOrgId'
 import { AbstractRepo, FetchedLocations, FetchedVars } from '#app/repositories/apiRepository'
-import { RequestedVars, OrgId } from '#app/types.js'
+import { RequestedVars, OrgId, LocationId } from '#app/types.js'
 
 
 class FakeApiRepo implements AbstractRepo {
@@ -25,11 +25,15 @@ class FakeApiRepo implements AbstractRepo {
 
 describe('getLocationsByOrgId', () => {
   it('returns the locations for the given org id', async () => {
+    const locationId1 = 1 as LocationId
+    const locationId2 = 2 as LocationId
+    const orgId = 1 as OrgId
+
     const fakeApiRepo = new FakeApiRepo({
-      locations: [{ id: 1, orgId: 1 }, { id: 2, orgId: 1 }],
+      locations: [{ id: locationId1, orgId }, { id: locationId2, orgId }],
       variables: [
-        { id: 1, orgId: 1, locationId: 1, key: 'testKey', value: 'loc1Value' },
-        { id: 2, orgId: 1, locationId: null, key: 'orgKey', value: 'orgValue' }
+        { id: 1, orgId, locationId: locationId1, key: 'testKey', value: 'loc1Value' },
+        { id: 2, orgId, locationId: (null as unknown as LocationId), key: 'orgKey', value: 'orgValue' }
       ]
     })
 
