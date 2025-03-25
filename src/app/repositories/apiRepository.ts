@@ -74,7 +74,7 @@ class ApiRepo implements AbstractRepo {
     }))
     const parsedVariables = VariablesSchema.parse(fetchedVariables) as FetchedVars
 
-    return parsedVariables.map(variable => new Variable(
+    return parsedVariables.map(variable => Variable.create(
       variable.value,
       variable.key,
       variable.orgId,

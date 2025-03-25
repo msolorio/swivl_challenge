@@ -1,12 +1,19 @@
-import { RequestedVars, LocationId, OrgId, VariableKey, VariableValue, ResultLocation, Inheritance } from "#app/types.js"
-import { Variable } from "#app/domain/Variable.js"
+import {
+  RequestedVars,
+  LocationId,
+  OrgId,
+  VariableKey,
+  VariableValue,
+  ResultLocation,
+  Inheritance
+} from "#app/types"
 
 class Location {
   private _data: ResultLocation
 
   constructor(
-    private locationId: LocationId,
-    private orgId: OrgId,
+    private _locationId: LocationId,
+    private _orgId: OrgId,
   ) {
     this._data = this.init()
   }
@@ -14,8 +21,8 @@ class Location {
   init(): ResultLocation {
     return {
       location: {
-        id: this.locationId,
-        orgId: this.orgId
+        id: this._locationId,
+        orgId: this._orgId
       },
       variables: {}
     }
@@ -29,28 +36,38 @@ class Location {
     return this
   }
 
-  applyOrgVars(orgVars: Array<Variable>) {
-    this.applyVars(orgVars, 'org')
+  setOrgVar(variableKey: VariableKey, variableValue: VariableValue) {
+    this.setVariable(variableKey, variableValue, 'org')
   }
 
-  applyLocationVars(locationVars: Array<Variable>) {
-    this.applyVars(locationVars, 'location')
-  }
-
-  applyVars(vars: Array<Variable>, inheritance: Inheritance) {
-    vars.forEach(variable => this.setVariable(variable.key, variable.value, inheritance))
+  setLocationVar(variableKey: VariableKey, variableValue: VariableValue) {
+    this.setVariable(variableKey, variableValue, 'location')
   }
 
   setVariable(key: VariableKey, value: VariableValue, inheritance: Inheritance) {
-    this._data.variables[key] = { value, inheritance }
+    if (this.hasVariable(key) && !this.hasVariableSet(key)) {
+      this._data.variables[key] = { value, inheritance }
+    }
   }
 
   get id() {
     return this._data.location.id
   }
 
+  get orgId() {
+    return this._orgId
+  }
+
   isForOrg(orgId: OrgId) {
     return this.orgId === orgId
+  }
+
+  hasVariableSet(key: VariableKey) {
+    return this._data.variables[key].value !== null
+  }
+
+  hasVariable(key: VariableKey) {
+    return this._data.variables[key] !== undefined
   }
 
   get data() {

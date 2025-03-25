@@ -1,24 +1,27 @@
 import { LocationId, VariableKey, VariableValue, OrgId, RequestedVars } from "#app/types.js"
 import { Location } from "#app/domain/Location.js"
 
-class Variable {
+abstract class Variable {
   constructor(
-    private _value: VariableValue,
-    private _key: VariableKey,
-    private _orgId: OrgId,
+    protected _value: VariableValue,
+    protected _key: VariableKey,
+    protected _orgId: OrgId,
     private _locationId: LocationId
   ) { }
 
-  get value() {
-    return this._value
-  }
+  abstract applyToLocation(location: Location): void
 
-  get key() {
-    return this._key
-  }
-
-  get isOrgVariable() {
-    return this._locationId === null
+  static create(
+    value: VariableValue,
+    key: VariableKey,
+    orgId: OrgId,
+    locationId: LocationId
+  ) {
+    if (locationId === null) {
+      return new OrgVariable(value, key, orgId, locationId)
+    } else {
+      return new LocationVariable(value, key, orgId, locationId)
+    }
   }
 
   isForOrg(orgId: OrgId) {
@@ -31,6 +34,21 @@ class Variable {
 
   isForLocation(location: Location) {
     return this._locationId === location.id
+  }
+}
+
+class LocationVariable extends Variable {
+  applyToLocation(location: Location) {
+    this.isForLocation(location)
+      && this.isForOrg(location.orgId)
+      && location.setLocationVar(this._key, this._value)
+  }
+}
+
+class OrgVariable extends Variable {
+  applyToLocation(location: Location) {
+    this.isForOrg(location.orgId)
+      && location.setOrgVar(this._key, this._value)
   }
 }
 

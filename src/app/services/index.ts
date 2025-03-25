@@ -21,23 +21,16 @@ async function getLocationsByOrgId({ apiRepo, orgId, requestedVars }: {
     throw new OrgIdNotFoundError('No locations found for orgId')
   }
 
-  const filteredVars = variables
-    .filter(v => v.isForOrg(orgId) && v.isRequested(requestedVars))
-
-  return mergeVarsToLocations(filteredLocations, filteredVars)
+  return mergeVarsToLocations(filteredLocations, variables)
 }
 
 
 function mergeVarsToLocations(locations: Array<Location>, variables: Array<Variable>): Array<ResultLocation> {
-  return locations.map(location => {
-    const orgVars = variables.filter(v => v.isOrgVariable)
-    const locationVars = variables.filter(v => v.isForLocation(location))
-
-    location.applyOrgVars(orgVars)
-    location.applyLocationVars(locationVars)
-
-    return location.data
+  locations.forEach(location => {
+    variables.forEach(v => v.applyToLocation(location))
   })
+
+  return locations.map(l => l.data)
 }
 
 export {

@@ -46,8 +46,8 @@ describe('getLocationsByOrgId', () => {
         new Location(locationId1, orgId1),
       ],
       variables: [
-        new Variable(locValue1, testKey1, orgId1, locationId1),
-        new Variable(orgValue, orgKey, orgId1, locationIdNull)
+        Variable.create(locValue1, testKey1, orgId1, locationId1),
+        Variable.create(orgValue, orgKey, orgId1, locationIdNull)
       ]
     })
 
@@ -74,8 +74,8 @@ describe('getLocationsByOrgId', () => {
         new Location(locationId1, orgId1),
       ],
       variables: [
-        new Variable(locValue1, testKey1, orgId1, locationId1),
-        new Variable(orgValue, orgKey, orgId2, locationIdNull)
+        Variable.create(locValue1, testKey1, orgId1, locationId1),
+        Variable.create(orgValue, orgKey, orgId2, locationIdNull)
       ]
     })
 
@@ -102,8 +102,33 @@ describe('getLocationsByOrgId', () => {
         new Location(locationId1, orgId1),
       ],
       variables: [
-        new Variable(locValue1, testKey1, orgId1, locationId1),
-        new Variable(locValue2, testKey2, orgId1, locationId1)
+        Variable.create(locValue1, testKey1, orgId1, locationId1),
+        Variable.create(locValue2, testKey2, orgId1, locationId1)
+      ]
+    })
+
+    const result = await getLocationsByOrgId({
+      apiRepo: fakeApiRepo,
+      orgId: orgId1,
+      requestedVars: [testKey1] as RequestedVars
+    })
+
+    expect(result).toEqual([
+      {
+        location: { id: locationId1, orgId: orgId1 },
+        variables: { [testKey1]: { value: locValue1, inheritance: 'location' } }
+      }
+    ])
+  })
+
+  it('org var does not override location var if it is already set', async () => {
+    const fakeApiRepo = new FakeApiRepo({
+      locations: [
+        new Location(locationId1, orgId1),
+      ],
+      variables: [
+        Variable.create(locValue1, testKey1, orgId1, locationId1),
+        Variable.create(orgValue, testKey1, orgId1, locationIdNull)
       ]
     })
 
