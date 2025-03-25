@@ -1,7 +1,11 @@
 # Swivl Challenge
 
+### Dependencies
+- Docker
+
 ### Setup
 ```sh
+# make sure docker is running
 git clone https://github.com/msolorio/swivl_challenge.git
 cd swivl_challenge
 make build
