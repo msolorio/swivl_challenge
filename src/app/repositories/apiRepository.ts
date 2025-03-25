@@ -2,23 +2,23 @@ import axios, { AxiosError, AxiosInstance } from 'axios'
 import axiosRetry from 'axios-retry'
 import { z, ZodError } from 'zod'
 import { ExternalApiError, SchemaValidationError } from '#app/errors'
-import { LocationId, OrgId } from '#app/types'
-
-
-interface AbstractRepo {
-  getLocations: () => Promise<FetchedLocations>
-  getVariables: () => Promise<FetchedVars>
-}
+import { LocationId, OrgId, VariableKey, VariableValue } from '#app/types'
+import { Variable } from '#app/domain/Variable'
+import { Location } from '#app/domain/Location'
 
 type FetchedLocations = Array<{ id: LocationId; orgId: OrgId }>
 type FetchedVars = Array<{
   id: number
   orgId: OrgId
   locationId: LocationId
-  key: string
-  value: string
+  key: VariableKey
+  value: VariableValue
 }>
 
+interface AbstractRepo {
+  getLocations: () => Promise<Array<Location>>
+  getVariables: () => Promise<Array<Variable>>
+}
 
 class ApiRepo implements AbstractRepo {
   private client: AxiosInstance
@@ -47,29 +47,39 @@ class ApiRepo implements AbstractRepo {
     }
   }
 
-  async getLocations(): Promise<FetchedLocations> {
+  async getLocations(): Promise<Array<Location>> {
+    const locations = await this.get('/locations')
+
     const LocationsSchema = z.array(z.object({
       id: z.number(),
       orgId: z.number(),
     }))
+    const parsedLocations = LocationsSchema.parse(locations) as FetchedLocations
 
-    const locations = await this.get('/locations')
-
-    return LocationsSchema.parse(locations) as FetchedLocations
+    return parsedLocations.map(location => new Location(
+      location.id,
+      location.orgId,
+    ))
   }
 
-  async getVariables(): Promise<FetchedVars> {
+  async getVariables(): Promise<Array<Variable>> {
+    const fetchedVariables = await this.get('/variables')
+
     const VariablesSchema = z.array(z.object({
       id: z.number(),
       orgId: z.number(),
       locationId: z.number().nullable(),
       key: z.string(),
-      value: z.string(),
+      value: z.string().nullable(),
     }))
+    const parsedVariables = VariablesSchema.parse(fetchedVariables) as FetchedVars
 
-    const variables = await this.get('/variables')
-
-    return VariablesSchema.parse(variables) as FetchedVars
+    return parsedVariables.map(variable => new Variable(
+      variable.value,
+      variable.key,
+      variable.orgId,
+      variable.locationId,
+    ))
   }
 }
 

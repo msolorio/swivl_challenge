@@ -1,14 +1,17 @@
-import { getLocationsByOrgId } from '#app/services/getLocationsByOrgId'
-import { AbstractRepo, FetchedLocations, FetchedVars } from '#app/repositories/apiRepository'
-import { RequestedVars, OrgId, LocationId } from '#app/types.js'
+import { getLocationsByOrgId } from '#app/services/index.js'
+import { AbstractRepo } from '#app/repositories/apiRepository'
+import { RequestedVars, OrgId, LocationId, VariableKey, VariableValue } from '#app/types.js'
+import { Variable } from '#app/domain/Variable.js'
+import { Location } from '#app/domain/Location.js'
 
 
 class FakeApiRepo implements AbstractRepo {
-  private locations: FetchedLocations
-  private variables: FetchedVars
+  private locations: Array<Location>
+  private variables: Array<Variable>
 
   constructor({ locations, variables }: {
-    locations: FetchedLocations, variables: FetchedVars
+    locations: Array<Location>,
+    variables: Array<Variable>
   }) {
     this.locations = locations
     this.variables = variables
@@ -24,39 +27,96 @@ class FakeApiRepo implements AbstractRepo {
 }
 
 describe('getLocationsByOrgId', () => {
-  it('returns the locations for the given org id', async () => {
-    const locationId1 = 1 as LocationId
-    const locationId2 = 2 as LocationId
-    const orgId = 1 as OrgId
+  const locationId1 = 1 as LocationId
+  // const locationId2 = 2 as LocationId
+  const locationIdNull = null
+  const orgId1 = 1 as OrgId
+  const orgId2 = 2 as OrgId
+  const testKey1 = 'testKey1' as VariableKey
+  const testKey2 = 'testKey2' as VariableKey
+  const locValue1 = 'locValue1' as VariableValue
+  const locValue2 = 'locValue2' as VariableValue
+  const orgKey = 'orgKey' as VariableKey
+  const orgValue = 'orgValue' as VariableValue
+  // const requestedVars = [testKey1, orgKey] as RequestedVars
 
+  it('applies location and org variables to the locations', async () => {
     const fakeApiRepo = new FakeApiRepo({
-      locations: [{ id: locationId1, orgId }, { id: locationId2, orgId }],
+      locations: [
+        new Location(locationId1, orgId1),
+      ],
       variables: [
-        { id: 1, orgId, locationId: locationId1, key: 'testKey', value: 'loc1Value' },
-        { id: 2, orgId, locationId: (null as unknown as LocationId), key: 'orgKey', value: 'orgValue' }
+        new Variable(locValue1, testKey1, orgId1, locationId1),
+        new Variable(orgValue, orgKey, orgId1, locationIdNull)
       ]
     })
 
     const result = await getLocationsByOrgId({
       apiRepo: fakeApiRepo,
-      orgId: 1 as OrgId,
-      requestedVars: ['testKey', 'orgKey'] as RequestedVars
+      orgId: orgId1,
+      requestedVars: [testKey1, orgKey] as RequestedVars
     })
 
     expect(result).toEqual([
       {
-        location: { id: 1, orgId: 1 },
+        location: { id: locationId1, orgId: orgId1 },
         variables: {
-          testKey: { value: 'loc1Value', inheritance: 'location' },
-          orgKey: { value: 'orgValue', inheritance: 'org' }
+          [testKey1]: { value: locValue1, inheritance: 'location' },
+          [orgKey]: { value: orgValue, inheritance: 'org' }
         }
-      },
+      }
+    ])
+  })
+
+  it('does not apply variables with incorrect org id', async () => {
+    const fakeApiRepo = new FakeApiRepo({
+      locations: [
+        new Location(locationId1, orgId1),
+      ],
+      variables: [
+        new Variable(locValue1, testKey1, orgId1, locationId1),
+        new Variable(orgValue, orgKey, orgId2, locationIdNull)
+      ]
+    })
+
+    const result = await getLocationsByOrgId({
+      apiRepo: fakeApiRepo,
+      orgId: orgId1,
+      requestedVars: [testKey1, orgKey] as RequestedVars
+    })
+
+    expect(result).toEqual([
       {
-        location: { id: 2, orgId: 1 },
+        location: { id: locationId1, orgId: orgId1 },
         variables: {
-          testKey: { value: null, inheritance: null },
-          orgKey: { value: 'orgValue', inheritance: 'org' }
+          [testKey1]: { value: locValue1, inheritance: 'location' },
+          [orgKey]: { value: null, inheritance: null }
         }
+      }
+    ])
+  })
+
+  it('does not apply unrequested variables', async () => {
+    const fakeApiRepo = new FakeApiRepo({
+      locations: [
+        new Location(locationId1, orgId1),
+      ],
+      variables: [
+        new Variable(locValue1, testKey1, orgId1, locationId1),
+        new Variable(locValue2, testKey2, orgId1, locationId1)
+      ]
+    })
+
+    const result = await getLocationsByOrgId({
+      apiRepo: fakeApiRepo,
+      orgId: orgId1,
+      requestedVars: [testKey1] as RequestedVars
+    })
+
+    expect(result).toEqual([
+      {
+        location: { id: locationId1, orgId: orgId1 },
+        variables: { [testKey1]: { value: locValue1, inheritance: 'location' } }
       }
     ])
   })
