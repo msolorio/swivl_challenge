@@ -3,11 +3,12 @@ import {
   LocationId,
   OrgId,
   VariableKey,
-  VariableValue,
+  // VariableValue,
   ResultLocation,
-  Inheritance
+  Inheritance,
+  // Inheritance
 } from "#app/types"
-
+import { Variable } from "#app/domain/Variable"
 class Location {
   private _data: ResultLocation
 
@@ -36,34 +37,38 @@ class Location {
     return this
   }
 
-  setOrgVar(variableKey: VariableKey, variableValue: VariableValue) {
-    this.setVariable(variableKey, variableValue, 'org')
+  setOrgVar(variable: Variable) {
+    if (!this.hasVariableSet(variable.key)) {
+      this.setVariable(variable, 'org')
+    }
   }
 
-  setLocationVar(variableKey: VariableKey, variableValue: VariableValue) {
-    this.setVariable(variableKey, variableValue, 'location')
+  setLocationVar(variable: Variable) {
+    if (this.matchesLocationId(variable.locationId)) {
+      this.setVariable(variable, 'location')
+    }
   }
 
-  setVariable(key: VariableKey, value: VariableValue, inheritance: Inheritance) {
-    if (this.hasVariable(key) && !this.hasVariableSet(key)) {
-      this._data.variables[key] = { value, inheritance }
+  setVariable(variable: Variable, inheritance: Inheritance) {
+    if (this.hasVariable(variable.key) && this.matchesOrgId(variable.orgId)) {
+      this._data.variables[variable.key] = { value: variable.value, inheritance }
     }
   }
 
   get id() {
-    return this._data.location.id
+    return this._locationId
   }
 
-  get orgId() {
-    return this._orgId
+  matchesOrgId(orgId: OrgId) {
+    return this._orgId === orgId
   }
 
-  isForOrg(orgId: OrgId) {
-    return this.orgId === orgId
+  matchesLocationId(locationId: LocationId) {
+    return this._locationId === locationId
   }
 
   hasVariableSet(key: VariableKey) {
-    return this._data.variables[key].value !== null
+    return this._data.variables[key]?.value !== null
   }
 
   hasVariable(key: VariableKey) {

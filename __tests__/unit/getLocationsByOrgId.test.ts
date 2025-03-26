@@ -145,4 +145,29 @@ describe('getLocationsByOrgId', () => {
       }
     ])
   })
+
+  it('location var overrides org var if it is already set', async () => {
+    const fakeApiRepo = new FakeApiRepo({
+      locations: [
+        new Location(locationId1, orgId1),
+      ],
+      variables: [
+        Variable.create(orgValue, testKey1, orgId1, locationIdNull),
+        Variable.create(locValue1, testKey1, orgId1, locationId1),
+      ]
+    })
+
+    const result = await getLocationsByOrgId({
+      apiRepo: fakeApiRepo,
+      orgId: orgId1,
+      requestedVars: [testKey1] as RequestedVars
+    })
+
+    expect(result).toEqual([
+      {
+        location: { id: locationId1, orgId: orgId1 },
+        variables: { [testKey1]: { value: locValue1, inheritance: 'location' } }
+      }
+    ])
+  })
 })

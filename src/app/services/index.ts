@@ -14,7 +14,7 @@ async function getLocationsByOrgId({ apiRepo, orgId, requestedVars }: {
   const variables = await apiRepo.getVariables()
 
   const filteredLocations = locations
-    .filter(l => l.isForOrg(orgId))
+    .filter(l => l.matchesOrgId(orgId))
     .map(l => l.initVarsMap(requestedVars))
 
   if (!filteredLocations.length) {
