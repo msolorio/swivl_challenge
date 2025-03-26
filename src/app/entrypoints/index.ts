@@ -16,7 +16,7 @@ app.get('/api/locations/:orgId', async (req, res) => {
   try {
     const OrgIdSchema = z.number()
     const orgId = OrgIdSchema.parse(Number(req.params.orgId)) as OrgId
-    const requestedVars = String(req.query.variables)
+    const requestedVars = String(req.query.variables || '')
       .split(',')
       .filter(Boolean) as RequestedVars
 
