@@ -3,12 +3,11 @@ import {
   LocationId,
   OrgId,
   VariableKey,
-  // VariableValue,
   ResultLocation,
   Inheritance,
-  // Inheritance
 } from "#app/types"
 import { Variable } from "#app/domain/Variable"
+
 class Location {
   private _data: ResultLocation
 
