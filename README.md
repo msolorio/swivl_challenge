@@ -22,3 +22,18 @@ Run tests
 ```sh
 make test
 ```
+_____
+
+## Design documents
+
+### High level design
+![High level design](./docs/high_level_design.png)
+____
+
+### Domain logic - current implementation
+![Domain logic - current](./docs/domain_logic_current.png)
+
+____
+
+### Domain logic - with rich domain model
+![Domain logic - rich model](./docs/domain_logic_rich_model.png)
